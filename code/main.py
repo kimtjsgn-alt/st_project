@@ -20,6 +20,12 @@ st.markdown("""
 st.divider()
 
 TARGET_CITIES = ["평택시", "용인시", "화성시", "이천시"]
+CITY_NORMALIZE_MAP = {
+    "평택": "평택시", "평택시": "평택시",
+    "용인": "용인시", "용인시": "용인시",
+    "화성": "화성시", "화성시": "화성시",
+    "이천": "이천시", "이천시": "이천시",
+}
 
 
 # 2. KOSIS 원본 CSV 자동 읽기 및 전처리 함수
@@ -37,7 +43,8 @@ def find_city_col(df):
     for col in df.columns:
         if re.match(r"^\d{4}\.\d{2}", str(col).strip()):
             continue
-        if df[col].astype(str).str.strip().isin(TARGET_CITIES).any():
+        mapped = df[col].astype(str).str.strip().map(CITY_NORMALIZE_MAP)
+        if mapped.notna().any():
             return col
     return None
 
@@ -61,9 +68,9 @@ def merge_kosis_files(files):
 
         city_col = find_city_col(raw)
         if city_col is None:
-            raise ValueError(f"[{fname}] 파일에서 '평택시, 용인시, 화성시, 이천시' 열을 찾지 못했습니다.")
+            raise ValueError(f"[{fname}] 파일에서 '평택(시), 용인(시), 화성(시), 이천(시)' 열을 찾지 못했습니다.")
 
-        raw[city_col] = raw[city_col].astype(str).str.strip()
+        raw[city_col] = raw[city_col].astype(str).str.strip().map(CITY_NORMALIZE_MAP)
         raw = raw[raw[city_col].isin(TARGET_CITIES)].copy()
 
         # (1) 주민등록인구 파일 판별
